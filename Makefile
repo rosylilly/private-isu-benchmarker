@@ -1,19 +1,13 @@
-versions:=$(wildcard v*)
-
-define MAKE_VERSION
-	@echo "===> ${2} ${1}"
-	@cd ${1} && make ${2} || true
-
-endef
-
 .PHONY: build
-build:
-	$(foreach version,$(versions),$(call MAKE_VERSION,${version},build))
+build: bin/benchmarker
+
+.PHONY: test
+test:
+	go test ./...
 
 .PHONY: run
-run:
-	$(foreach version,$(versions),$(call MAKE_VERSION,${version},run))
+run: build
+	./bin/benchmarker
 
-.PHONY: clean
-clean:
-	$(foreach version,$(versions),$(call MAKE_VERSION,${version},clean))
+bin/benchmarker: $(shell find . -name '*.go' -print)
+	go build -o $@ .
