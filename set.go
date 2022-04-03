@@ -61,7 +61,7 @@ func (s *Set[T]) Get(id int) (T, bool) {
 }
 
 // Set にモデルを追加するメソッド
-// 追加時に CreatedAt でソート済みの位置に追加する
+// 追加時に CreatedAt でソート済みの位置に追加
 // CreatedAt が重複したら ID で昇順
 func (s *Set[T]) Add(model T) bool {
 	s.mu.Lock()
@@ -83,14 +83,14 @@ func (s *Set[T]) Add(model T) bool {
 			m := s.list[i]
 			pos = i
 
-			// 追加しようとしているモデルより CreatedAt が古ければその前に追加する
+			// 追加しようとしているモデルより CreatedAt が古ければその前に追加
 			if m.GetCreatedAt().Before(model.GetCreatedAt()) {
 				break
 			}
 
 			// CreatedAt が同一で
 			if m.GetCreatedAt().Equal(model.GetCreatedAt()) {
-				// 追加しようとしているモデルより ID が大きければその前に追加する
+				// 追加しようとしているモデルより ID が大きければその前に追加
 				if m.GetID() > model.GetID() {
 					break
 				}

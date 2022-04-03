@@ -64,13 +64,13 @@ func (s *Scenario) Prepare(ctx context.Context, step *isucandar.BenchmarkStep) e
 	if err != nil {
 		return failure.NewError(ErrInvalidRequest, err)
 	}
-	// レスポンスの Body は必ず Close する
+	// レスポンスの Body は必ず Close
 	defer res.Body.Close()
 
-	// レスポンスを検証する
+	// レスポンスを検証
 	ValidateResponse(
 		res,
-		// ステータスコードが 200 であることを検証する
+		// ステータスコードが 200 であることを検証
 		WithStatusCode(200),
 	).Add(step)
 
@@ -82,7 +82,7 @@ func (s *Scenario) Prepare(ctx context.Context, step *isucandar.BenchmarkStep) e
 func (s *Scenario) Load(ctx context.Context, step *isucandar.BenchmarkStep) error {
 	wg := &sync.WaitGroup{}
 
-	// 10秒おきにベンチマーク実行中であることを大会運営向けロガーに出力する
+	// 10秒おきにベンチマーク実行中であることを大会運営向けロガーに出力
 	// wg.Add(1)
 	// go func() {
 	// 	for {
@@ -406,7 +406,7 @@ func (s *Scenario) PostImage(ctx context.Context, step *isucandar.BenchmarkStep,
 	default:
 	}
 
-	// 画像を投稿する
+	// 画像を投稿
 	post := &Post{
 		Mime:   "image/png",
 		Body:   randomText(),

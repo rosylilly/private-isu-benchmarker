@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-// JSON 形式のダンプファイルからモデルの集合をロードする
+// JSON 形式のダンプファイルからモデルの集合をロード
 func (s *Set[T]) LoadJSON(jsonFile string) error {
 	// 引数に渡されたファイルを開く
 	file, err := os.Open(jsonFile)

@@ -44,7 +44,7 @@ func main() {
 	// この時点で各フィールドに値が設定されます
 	flag.Parse()
 
-	// 現在の設定を大会運営向けロガーに出力する
+	// 現在の設定を大会運営向けロガーに出力
 	AdminLogger.Print(option)
 
 	// シナリオの生成
@@ -73,7 +73,7 @@ func main() {
 	// ベンチマーク開始
 	result := benchmark.Start(ctx)
 
-	// エラーをすべて表示する
+	// エラーをすべて表示
 	for _, err := range result.Errors.All() {
 		// 選手向けにエラーメッセージが表示される
 		ContestantLogger.Printf("%v", err)
@@ -81,7 +81,7 @@ func main() {
 		AdminLogger.Printf("%+v", err)
 	}
 
-	// スコアをすべて表示する
+	// スコアをすべて表示
 	for tag, count := range result.Score.Breakdown() {
 		AdminLogger.Printf("%s: %d", tag, count)
 	}

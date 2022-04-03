@@ -49,7 +49,7 @@ func (v ValidationError) Error() string {
 	return strings.Join(messages, "\n")
 }
 
-// ValidationError が空かを判定する
+// ValidationError が空かを判定
 func (v ValidationError) IsEmpty() bool {
 	for _, err := range v.Errors {
 		if err != nil {
@@ -65,11 +65,11 @@ func (v ValidationError) IsEmpty() bool {
 	return true
 }
 
-// isucandar.BenchmarkStep に自身の持つエラーをすべて追加する
+// isucandar.BenchmarkStep に自身の持つエラーをすべて追加
 func (v ValidationError) Add(step *isucandar.BenchmarkStep) {
 	for _, err := range v.Errors {
 		if err != nil {
-			// 中身が ValidationError なら展開する
+			// 中身が ValidationError なら展開
 			if ve, ok := err.(ValidationError); ok {
 				ve.Add(step)
 			} else {
