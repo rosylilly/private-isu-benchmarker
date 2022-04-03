@@ -1,15 +1,20 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
+	"time"
 
+	"github.com/PuerkitoBio/goquery"
 	"github.com/isucon/isucandar"
 	"github.com/isucon/isucandar/agent"
 	"github.com/isucon/isucandar/failure"
@@ -19,6 +24,9 @@ import (
 const (
 	ErrInvalidStatusCode failure.StringCode = "status-code"
 	ErrInvalidPath       failure.StringCode = "path"
+	ErrNotFound          failure.StringCode = "not-found"
+	ErrCSRFToken         failure.StringCode = "csrf-token"
+	ErrInvalidPostOrder  failure.StringCode = "post-order"
 	ErrInvalidAsset      failure.StringCode = "asset"
 )
 
@@ -91,6 +99,7 @@ func ValidateResponse(res *http.Response, validators ...ResponseValidator) Valid
 }
 
 // ステータスコードコードを検証するバリデータ関数を返す高階関数
+// 例: ValidateResponse(res, WithStatusCode(200))
 func WithStatusCode(statusCode int) ResponseValidator {
 	return func(r *http.Response) error {
 		if r.StatusCode != statusCode {
@@ -134,6 +143,145 @@ func WithLocation(val string) ResponseValidator {
 	}
 }
 
+// レスポンスボディに特定の文字列が含まれていることを検証するバリデータ関数を返す高階関数
+func WithIncludeBody(val string) ResponseValidator {
+	return func(r *http.Response) error {
+		defer r.Body.Close()
+
+		body, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			return failure.NewError(
+				ErrInvalidResponse,
+				fmt.Errorf(
+					"%s %s : %s",
+					r.Request.Method,
+					r.Request.URL.Path,
+					err.Error(),
+				),
+			)
+		}
+
+		if bytes.IndexAny(body, val) == -1 {
+			return failure.NewError(
+				ErrNotFound,
+				fmt.Errorf(
+					"%s %s : %s is not found in body",
+					r.Request.Method,
+					r.Request.URL.Path,
+					val,
+				),
+			)
+		}
+
+		return nil
+	}
+}
+
+func WithCSRFToken(user *User) ResponseValidator {
+	return func(r *http.Response) error {
+		defer r.Body.Close()
+
+		user.SetCSRFToken("")
+
+		doc, err := goquery.NewDocumentFromReader(r.Body)
+		if err != nil {
+			return failure.NewError(
+				ErrInvalidResponse,
+				fmt.Errorf(
+					"%s %s : %s",
+					r.Request.Method,
+					r.Request.URL.Path,
+					err.Error(),
+				),
+			)
+		}
+
+		node := doc.Find(`input[name="csrf_token"]`).Get(0)
+		if node == nil {
+			return failure.NewError(
+				ErrCSRFToken,
+				fmt.Errorf(
+					"%s %s : CSRF token is not found",
+					r.Request.Method,
+					r.Request.URL.Path,
+				),
+			)
+		}
+
+		for _, attr := range node.Attr {
+			if attr.Key == "value" {
+				user.SetCSRFToken(attr.Val)
+			}
+		}
+
+		if user.GetCSRFToken() == "" {
+			return failure.NewError(
+				ErrCSRFToken,
+				fmt.Errorf(
+					"%s %s : CSRF token is not found",
+					r.Request.Method,
+					r.Request.URL.Path,
+				),
+			)
+		}
+
+		return nil
+	}
+}
+
+func WithOrderedPosts() ResponseValidator {
+	return func(r *http.Response) error {
+		defer r.Body.Close()
+		doc, err := goquery.NewDocumentFromReader(r.Body)
+		if err != nil {
+			return failure.NewError(
+				ErrInvalidResponse,
+				fmt.Errorf(
+					"%s %s : %s",
+					r.Request.Method,
+					r.Request.URL.Path,
+					err.Error(),
+				),
+			)
+		}
+
+		errs := []error{}
+		previousCreatedAt := time.Now()
+		doc.Find(".isu-posts .isu-post").Each(func(_ int, s *goquery.Selection) {
+			post := s.First()
+			idAttr, exists := post.Attr("id")
+			if !exists {
+				return
+			}
+			creadtedAtAttr, exists := post.Attr("data-created-at")
+			if !exists {
+				return
+			}
+
+			id, _ := strconv.Atoi(strings.TrimPrefix(idAttr, "pid_"))
+			createdAt, _ := time.Parse(time.RFC3339, creadtedAtAttr)
+
+			if createdAt.After(previousCreatedAt) {
+				errs = append(errs,
+					failure.NewError(
+						ErrInvalidPostOrder,
+						fmt.Errorf(
+							"%s %s : invalid order in top page: %s",
+							r.Request.Method,
+							r.Request.URL.Path,
+							createdAt,
+						),
+					),
+				)
+				AdminLogger.Printf("isu-post: %d: %s", id, createdAt)
+			}
+
+		})
+
+		return ValidationError{errs}
+	}
+}
+
 // アセットの MD5 ハッシュ
 var (
 	assetsMD5 = map[string]string{
@@ -173,7 +321,7 @@ func WithAssets(ctx context.Context, ag *agent.Agent) ResponseValidator {
 							"%s /%s : %v",
 							"GET",
 							path,
-							err,
+							res.Error,
 						),
 					),
 				)
@@ -190,7 +338,6 @@ func WithAssets(ctx context.Context, ag *agent.Agent) ResponseValidator {
 
 			expectedMD5, ok := assetsMD5[path]
 			if !ok {
-				AdminLogger.Printf("%s?????", path)
 				// 定義にないリソースなら検証しない
 				continue
 			}

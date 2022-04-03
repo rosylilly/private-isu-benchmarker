@@ -85,4 +85,36 @@ func main() {
 	for tag, count := range result.Score.Breakdown() {
 		AdminLogger.Printf("%s: %d", tag, count)
 	}
+
+	// スコアの表示
+	score := SumScore(result)
+	ContestantLogger.Printf("score: %d", score)
+
+	// 0点以下(fail)ならエラーで終了
+	if option.ExitErrorOnFail && score <= 0 {
+		os.Exit(1)
+	}
+}
+
+func SumScore(result *isucandar.BenchmarkResult) int64 {
+	score := result.Score
+	// 各タグに倍率を設定
+	score.Set(ScoreGETRoot, 1)
+	score.Set(ScoreGETLogin, 1)
+	score.Set(ScorePOSTLogin, 2)
+	score.Set(ScorePOSTRoot, 5)
+
+	// 加点分の合算
+	addition := score.Sum()
+
+	// エラーは1つ1点減点
+	deduction := len(result.Errors.All())
+
+	// 合計(0を下回ったら0点にする)
+	sum := addition - int64(deduction)
+	if sum < 0 {
+		sum = 0
+	}
+
+	return sum
 }

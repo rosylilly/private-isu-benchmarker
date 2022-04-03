@@ -19,7 +19,8 @@ type User struct {
 	DeleteFlag  int       `json:"del_flg"`
 	CreatedAt   time.Time `json:"created_at"`
 
-	Agent *agent.Agent
+	csrfToken string
+	Agent     *agent.Agent
 }
 
 // Model.GetID の実装
@@ -60,6 +61,30 @@ func (m *User) GetAgent(o Option) (*agent.Agent, error) {
 	m.Agent = a
 
 	return a, nil
+}
+
+// ユーザーの agent.Agent を初期化
+func (m *User) ClearAgent() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.Agent = nil
+}
+
+// ユーザーごとの CSRF トークンのセット
+func (m *User) SetCSRFToken(token string) {
+	m.mu.Lock()
+	m.csrfToken = token
+	m.mu.Unlock()
+}
+
+// ユーザーごとの CSRF トークンの取得
+func (m *User) GetCSRFToken() string {
+	m.mu.RLock()
+	token := m.csrfToken
+	m.mu.RUnlock()
+
+	return token
 }
 
 // Post の構造体
