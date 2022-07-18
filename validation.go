@@ -275,10 +275,12 @@ func WithOrderedPosts() ResponseValidator {
 				)
 				AdminLogger.Printf("isu-post: %d: %s", id, createdAt)
 			}
-
+			previousCreatedAt = createdAt
 		})
 
-		return ValidationError{errs}
+		return ValidationError{
+			Errors: errs,
+		}
 	}
 }
 
