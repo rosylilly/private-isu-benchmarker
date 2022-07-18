@@ -83,8 +83,9 @@ func main() {
 
 	// スコアをすべて表示
 	for tag, count := range result.Score.Breakdown() {
-		AdminLogger.Printf("%s: %d", tag, count)
+		ContestantLogger.Printf("%s: %d", tag, count)
 	}
+	ContestantLogger.Printf("error: %d", len(result.Errors.All()))
 
 	// スコアの表示
 	score := SumScore(result)
