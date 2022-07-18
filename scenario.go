@@ -341,7 +341,7 @@ func (s *Scenario) LoginFailure(ctx context.Context, step *isucandar.BenchmarkSt
 		step.AddError(failure.NewError(ErrInvalidRequest, err))
 		return false
 	}
-	defer getRes.Body.Close()
+	defer redirectRes.Body.Close()
 
 	// レスポンスを検証
 	redirectValidation := ValidateResponse(
@@ -447,7 +447,7 @@ func (s *Scenario) PostImage(ctx context.Context, step *isucandar.BenchmarkStep,
 		step.AddError(failure.NewError(ErrInvalidRequest, err))
 		return false
 	}
-	defer getRes.Body.Close()
+	defer redirectRes.Body.Close()
 
 	redirectValidation := ValidateResponse(
 		redirectRes,
